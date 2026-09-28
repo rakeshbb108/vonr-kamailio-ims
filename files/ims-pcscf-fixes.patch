@@ -1,0 +1,59 @@
+diff --git a/pcscf/kamailio_pcscf.cfg b/pcscf/kamailio_pcscf.cfg
+index f525027..a185b54 100644
+--- a/pcscf/kamailio_pcscf.cfg
++++ b/pcscf/kamailio_pcscf.cfg
+@@ -130,8 +130,8 @@ auto_aliases=no
+ 
+ #phone2tel=1
+ 
+-udp_mtu = 1300
+-udp_mtu_try_proto = TCP
++#udp_mtu = 1300
++#udp_mtu_try_proto = TCP
+ 
+ /* uncomment and configure the following line if you want Kamailio to 
+    bind on a specific interface/port/proto (default bind on all available) */
+@@ -322,7 +322,7 @@ modparam("rtimer", "exec", "timer=NATPING;route=NATPING")
+ # auto-discard branches from previous serial forking leg
+ #modparam("tm", "failure_reply_mode", 3)
+ # default retransmission timeout: 3 sec
+-modparam("tm", "fr_timer", 3000)
++modparam("tm", "fr_timer", 10000) # was 3000: allow time for paging an idle UE
+ # default invite retransmission timeout after 1xx: 120sec
+ modparam("tm", "fr_inv_timer", 120000)
+ # Dont reply automatically with "100 Trying"
+diff --git a/pcscf/pcscf.cfg b/pcscf/pcscf.cfg
+index 96ce18c..296a787 100644
+--- a/pcscf/pcscf.cfg
++++ b/pcscf/pcscf.cfg
+@@ -27,7 +27,7 @@ listen=tcp:PCSCF_IP:5060
+ # - IPSEC_SETDSTURI_FULL 128
+ # - IPSEC_FORWARD_USEVIA 256
+ # - IPSEC_FORWARD_TRYTCP 512
+-#!define IPSEC_FORWARD_FLAGS 897
++#!define IPSEC_FORWARD_FLAGS 385
+ 
+ #!define RX_IMS_REG_DIALOG_DIRECTION 3
+ 
+@@ -137,7 +137,7 @@ alias=pcscf.IMS_DOMAIN
+ ##!define WITH_XMLRPC
+ ##!define WITH_IPBLOCK
+ ##!define WITH_ANTIFLOOD
+-#!define WITH_RX
++##!define WITH_RX
+ ##!define WITH_N5
+ #!define WITH_TCP
+ ##!define WITH_RTPIPV4
+diff --git a/pcscf/pcscf_init.sh b/pcscf/pcscf_init.sh
+index 6b48853..6de585f 100755
+--- a/pcscf/pcscf_init.sh
++++ b/pcscf/pcscf_init.sh
+@@ -94,7 +94,7 @@ sed -i 's|RTPENGINE_IP|'$RTPENGINE_IP'|g' /etc/kamailio_pcscf/kamailio_pcscf.cfg
+ sed -i 's|RTPENGINE_IP|'$RTPENGINE_IP'|g' /etc/kamailio_pcscf/route/rtp.cfg
+ 
+ # Add static route to route traffic back to UE as there is not NATing
+-ip r add ${UE_IPV4_IMS} via ${UPF_IP}
++ip r replace ${UE_IPV4_IMS} via ${UPF_IP} mtu 1400
+ # Route needed for VoWiFi client where internet APN is used
+ ip r add ${UE_IPV4_INTERNET} via ${UPF_IP}
+ 

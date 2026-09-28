@@ -1,0 +1,159 @@
+services:
+  dns:
+    build: ./dns
+    image: docker_dns
+    container_name: dns
+    env_file:
+      - .env
+    volumes:
+      - ./dns:/mnt/dns
+      - /etc/localtime:/etc/localtime:ro
+    expose:
+      - "53/udp"
+    networks:
+      default:
+        ipv4_address: ${DNS_IP}
+  rtpengine:
+    build: ./rtpengine
+    image: docker_rtpengine
+    container_name: rtpengine
+    privileged: true
+    env_file:
+      - .env
+    volumes:
+      - ./rtpengine:/mnt/rtpengine
+      - /etc/localtime:/etc/localtime:ro
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - TABLE=0
+      - INTERFACE=${RTPENGINE_IP}
+      - LISTEN_NG=${RTPENGINE_IP}:2223
+      - PIDFILE=/run/ngcp-rtpengine-daemon.pid
+      - PORT_MAX=50000
+      - PORT_MIN=49000
+      - NO_FALLBACK=no
+      - TOS=184
+    extra_hosts:
+      - "rtpengine:${RTPENGINE_IP}"
+    network_mode: host
+  mysql:
+    build: ./mysql
+    image: docker_mysql
+    container_name: mysql
+    env_file:
+      - .env
+    volumes:
+      - dbdata:/var/lib/mysql
+      - /etc/localtime:/etc/localtime:ro
+    expose:
+      - "3306/tcp"
+    networks:
+      default:
+        ipv4_address: ${MYSQL_IP}
+  pyhss:
+    build: ./pyhss
+    image: docker_pyhss
+    container_name: pyhss
+    dns: ${DNS_IP}
+    volumes:
+      - ./pyhss:/mnt/pyhss
+      - ./pyhss/logs:/pyhss/log/
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - .env
+    depends_on:
+      - dns
+      - mysql
+    expose:
+      - "${PYHSS_BIND_PORT}/tcp"
+      - "${PYHSS_BIND_PORT}/sctp"
+      - "8080/tcp"
+    ports:
+      - "8080:8080/tcp"
+    networks:
+      default:
+        ipv4_address: ${PYHSS_IP}
+  icscf:
+    image: docker_kamailio
+    container_name: icscf
+    dns: ${DNS_IP}
+    volumes:
+      - ./icscf:/mnt/icscf
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - .env
+    environment:
+      - COMPONENT_NAME=icscf
+    depends_on:
+      - dns
+      - mysql
+      - pyhss
+    expose:
+      - "${ICSCF_BIND_PORT}/tcp"
+      - "${ICSCF_BIND_PORT}/sctp"
+      - "4060/udp"
+      - "4060/tcp"
+    networks:
+      default:
+        ipv4_address: ${ICSCF_IP}
+  scscf:
+    image: docker_kamailio
+    container_name: scscf
+    dns: ${DNS_IP}
+    volumes:
+      - ./scscf:/mnt/scscf
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - .env
+    environment:
+      - COMPONENT_NAME=scscf
+    depends_on:
+      - dns
+      - mysql
+      - pyhss
+    expose:
+      - "${SCSCF_BIND_PORT}/tcp"
+      - "${SCSCF_BIND_PORT}/sctp"
+      - "6060/udp"
+      - "6060/tcp"
+    networks:
+      default:
+        ipv4_address: ${SCSCF_IP}
+  pcscf:
+    image: docker_kamailio
+    container_name: pcscf
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./pcscf:/mnt/pcscf
+      - ./pcscf/resolv.conf:/etc/resolv.conf:ro
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - .env
+    environment:
+      - COMPONENT_NAME=pcscf
+      - DEPLOY_MODE=IMS_ONLY
+    depends_on:
+      - dns
+      - mysql
+      - rtpengine
+      - icscf
+      - scscf
+    extra_hosts:
+      - "icscf.${IMS_DOMAIN}:${ICSCF_IP}"
+      - "scscf.${IMS_DOMAIN}:${SCSCF_IP}"
+      - "hss.${IMS_DOMAIN}:${PYHSS_IP}"
+      - "pcscf.${IMS_DOMAIN}:${PCSCF_IP}"
+    network_mode: host
+networks:
+  default:
+    name: docker_open5gs_default
+    ipam:
+      config:
+        - subnet: ${TEST_NETWORK}
+          gateway: ${DOCKER_BRIDGE_GW}
+volumes:
+  dbdata:
+    name: docker_open5gs_dbdata
