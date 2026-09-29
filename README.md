@@ -273,12 +273,11 @@ Any 5G SA gNB works if it meets these requirements. An example OAI setup is desc
 ## 7. Phone setup
 
 1. **SIM:** the IMSI and K/OPc must exist in **both** the core and PyHSS ([section 4](#4-provision-ims-subscribers-range-1100)).
-2. **APN:** add an APN named `ims`, with APN type `ims`. Keep `internet` as the default.
-3. **Calling:** turn on VoLTE / VoNR (5G calling) and turn Wi-Fi calling off. For test PLMNs such as 001/01 these options are often hidden:
+2. **Calling:** turn on VoLTE / VoNR (5G calling) and turn Wi-Fi calling off. For test PLMNs such as 001/01 these options are often hidden:
    - **Samsung:** enable them through the service menu or a CSC/IMS setting.
    - **OnePlus (Qualcomm):** needs a carrier-config / IMS override.
-4. **After adding a subscriber** that an IMS registration previously rejected, **fully reboot** the phone. Samsung phones back off IMS after an HSS reject, and toggling airplane mode is not enough.
-5. **Placement:** keep phones at least 1–2 m from the radio unit, with RSRP between about −60 and −90 dBm. A saturated phone (RSRP around −30 dBm) loses its uplink.
+3. **After adding a subscriber** that an IMS registration previously rejected, **fully reboot** the phone. Samsung phones back off IMS after an HSS reject, and toggling airplane mode is not enough.
+4. **Placement:** keep phones at least 1–2 m from the radio unit, with RSRP between about −60 and −90 dBm. A saturated phone (RSRP around −30 dBm) loses its uplink.
 
 ---
 
@@ -352,7 +351,6 @@ Stop the gNB before the IMS. The core stays up.
 | P-CSCF container fails; `address already in use` on 5060 | Another SIP service on the IMS host | Stop it. The P-CSCF needs `IMS_HOST_IP:5060/5100/6100` |
 | PyHSS container exits on first start | Race on DB table creation | `docker start pyhss` |
 | `docker compose` warns that `IMS_DOMAIN` is not set | `configure_site.sh` hasn't been run | Run it ([section 3.2](#32-apply-the-p-cscf-fixes-and-the-site-configuration)) |
-| Video upgrade accepted, then dropped after about 8 s (`m=video 0`) | No dedicated video QoS flow (5QI 2) without N5/Rx | Open item |
 
 Useful logs:
 - **IMS:** `docker logs -f pcscf|scscf|icscf|pyhss|rtpengine`
